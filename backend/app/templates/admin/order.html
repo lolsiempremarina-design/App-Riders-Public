@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% from "admin/_field.html" import field, status_badge %}
+
+{% block title %}Admin • Ordine #{{ order.id }}{% endblock %}
+
+{% block content %}
+    <div class="head">
+        <h1>Ordine #{{ order.id }} {{ status_badge(order.status) }}</h1>
+        {% if editable %}<a class="button secondary" href="{{ url_for('admin.edit_order', order_id=order.id) }}">Modifica</a>{% endif %}
+    </div>
+    <p><a href="{{ url_for('admin.index') }}">← Tutti gli ordini</a></p>
+
+    <div class="cards">
+        <section class="card">
+            <h2>Dati</h2>
+            <dl class="data">
+                <dt>Locale</dt><dd>{{ order.restaurant_name }}</dd>
+                <dt>Ritiro</dt><dd>{{ order.pickup_address }}</dd>
+                <dt>Consegna</dt><dd>{{ order.delivery_address }}</dd>
+                <dt>Cliente</dt><dd>{{ order.customer_name or '—' }}</dd>
+                <dt>Contenuto</dt><dd>{{ order.items or '—' }}</dd>
+                <dt>Note per il rider</dt><dd>{{ order.notes or '—' }}</dd>
+                <dt>Distanza</dt><dd>{% if order.distance_km is not none %}{{ order.distance_km|dec1 }} km{% else %}—{% endif %}</dd>
+                <dt>Compenso</dt><dd>{{ order.pay|euro }}{% if order.bonus %} + bonus {{ order.bonus|euro }} = <strong>{{ order.total|euro }}</strong>{% endif %}</dd>
+                <dt>Rider</dt><dd>{% if order.rider %}<a href="{{ url_for('admin.index', rider=order.rider.id) }}">{{ order.rider.username }}</a>{% else %}—{% endif %}</dd>
+                <dt>Creato da</dt><dd>{{ order.created_by.username if order.created_by else '—' }}</dd>
+            </dl>
+        </section>
+
+        <section class="card">
+            <h2>Tempi</h2>
+            <dl class="data">
+                <dt>Creato</dt><dd>{{ order.created_at|local_dt('%d/%m/%Y %H:%M') }}</dd>
+                <dt>Offerta valida fino a</dt><dd>{{ order.expires_at|local_dt('%d/%m/%Y %H:%M') if order.expires_at else 'senza scadenza' }}{% if order.status == 'available' and order.expires_at and order.expires_at <= now %} <span class="badge status-cancelled">scaduta</span>{% endif %}</dd>
+                <dt>Promessa entro</dt><dd>{{ order.due_at|local_dt('%d/%m/%Y %H:%M') }}</dd>
+                <dt>Accettato</dt><dd>{{ order.accepted_at|local_dt('%d/%m/%Y %H:%M') }}</dd>
+                <dt>Ritirato</dt><dd>{{ order.picked_up_at|local_dt('%d/%m/%Y %H:%M') }}</dd>
+                <dt>Consegnato</dt><dd>{{ order.delivered_at|local_dt('%d/%m/%Y %H:%M') }}{% if order.delivered_at and order.due_at %} ({{ 'in orario' if order.delivered_at <= order.due_at else 'in ritardo' }}){% endif %}</dd>
+                {% if order.cancelled_at %}<dt>Annullato</dt><dd>{{ order.cancelled_at|local_dt('%d/%m/%Y %H:%M') }}</dd>{% endif %}
+            </dl>
+        </section>
+
+        {% if assign_form %}
+        <section class="card">
+            <h2>Rider</h2>
+            <p class="muted">L'ordine passa subito al rider scelto, che riceve una notifica (e il precedente, se c'era, un avviso).
+                Un rider gestisce un ordine alla volta: chi ne ha già uno non si può scegliere.</p>
+            <form method="POST" action="{{ url_for('admin.assign_order', order_id=order.id) }}">
+                {{ assign_form.csrf_token }}
+                <input type="hidden" name="expected" value="{{ order.rider_id or '' }}">
+                {{ field(assign_form.rider_id) }}
+                <button type="submit">Assegna</button>
+            </form>
+        </section>
+        {% endif %}
+
+        {% if cancellable %}
+        <section class="card">
+            <h2>Annulla l'ordine</h2>
+            <form method="POST" action="{{ url_for('admin.cancel_order', order_id=order.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <label class="check"><input type="checkbox" name="confirm" value="1" required>
+                    <span>Confermo: l'ordine non sarà più consegnato{% if order.rider %} e {{ order.rider.username }} riceve un avviso{% endif %}.</span></label>
+                <button type="submit" class="danger">Annulla l'ordine</button>
+            </form>
+        </section>
+        {% endif %}
+    </div>
+{% endblock %}

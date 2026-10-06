@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-label="Nessuna foto">
+  <rect width="256" height="256" fill="#E4F4E1"/>
+  <circle cx="128" cy="100" r="46" fill="#9BCB94"/>
+  <path d="M40 232c8-50 46-78 88-78s80 28 88 78" fill="#9BCB94"/>
+</svg>

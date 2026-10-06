@@ -1,0 +1,5 @@
+# Script eseguiti in container Linux: sempre LF
+*.sh text eol=lf
+nginx/** text eol=lf
+rabbitmq/** text eol=lf
+*.py text eol=lf

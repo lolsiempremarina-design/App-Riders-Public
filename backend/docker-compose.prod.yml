@@ -1,0 +1,98 @@
+# Produzione (server Linux con Docker), sopra a docker-compose.yml:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+# Guida completa: DEPLOY.md. Le variabili obbligatorie (":?") devono essere in .env,
+# altrimenti Compose si ferma subito con un messaggio invece di usare valori di esempio.
+
+x-logging: &logging
+    driver: json-file
+    options:
+        max-size: "10m"
+        max-file: "5"
+
+x-app-env: &app-env
+    APP_ENV: production
+    FLASK_DEBUG: "false"
+    SESSION_COOKIE_SECURE: "true"
+    REMEMBER_COOKIE_SECURE: "true"
+    DB_HOST: db
+    DB_PORT: 5432
+    REDIS_HOST: redis
+    DATABASE_URL: postgresql+psycopg://${DB_USER:?DB_USER mancante in .env}:${DB_PASSWORD:?DB_PASSWORD mancante in .env}@db:5432/${DB_NAME:?DB_NAME mancante in .env}
+
+services:
+    db:
+        # nessuna porta verso l'esterno: il database è raggiungibile solo dalla rete interna
+        ports: !reset []
+        environment:
+            POSTGRES_USER: ${DB_USER:?DB_USER mancante in .env}
+            POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD mancante in .env}
+            POSTGRES_DB: ${DB_NAME:?DB_NAME mancante in .env}
+        logging: *logging
+
+    rabbitmq:
+        # senza interfaccia di gestione web
+        image: rabbitmq:3.13-alpine
+        environment:
+            RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:?RABBITMQ_USER mancante in .env}
+            RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD mancante in .env}
+        logging: *logging
+
+    redis:
+        logging: *logging
+
+    web:
+        # healthcheck in docker-compose.yml
+        environment: *app-env
+        logging: *logging
+
+    ws:
+        # chat in tempo reale, stessa configurazione di web
+        environment: *app-env
+        logging: *logging
+
+    fastapi:
+        logging: *logging
+
+    gps_worker:
+        logging: *logging
+
+    nginx:
+        environment:
+            SERVER_NAME: ${DOMAIN:?DOMAIN mancante in .env (es. app.esempio.it)}
+            SSL_CERTIFICATE: /etc/letsencrypt/live/${DOMAIN}/fullchain.pem
+            SSL_CERTIFICATE_KEY: /etc/letsencrypt/live/${DOMAIN}/privkey.pem
+        volumes:
+            - letsencrypt:/etc/letsencrypt:ro
+            - certbot_www:/var/www/certbot:ro
+        # ricarica la configurazione ogni 12 ore per usare i certificati rinnovati da certbot;
+        # /docker-entrypoint.sh genera prima conf.d/ror.conf dalla template
+        command: ["/bin/sh", "-c", "(while :; do sleep 43200; nginx -s reload; done) & exec /docker-entrypoint.sh nginx -g 'daemon off;'"]
+        logging: *logging
+
+    certbot:
+        # rinnovo automatico dei certificati Let's Encrypt (il primo si ottiene con scripts/init-letsencrypt.sh)
+        image: certbot/certbot:latest
+        restart: unless-stopped
+        entrypoint: ["/bin/sh", "-c", "trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done"]
+        volumes:
+            - letsencrypt:/etc/letsencrypt
+            - certbot_www:/var/www/certbot
+        logging: *logging
+
+    # backup e maintenance sono definiti in docker-compose.yml (girano anche sul PC usato come server per
+    # le prove): qui solo le credenziali obbligatorie, la configurazione di produzione e i log
+    backup:
+        # copia giornaliera di database e GPX in BACKUP_DIR (da copiare anche fuori dal server!)
+        environment:
+            PGUSER: ${DB_USER:?DB_USER mancante in .env}
+            PGPASSWORD: ${DB_PASSWORD:?DB_PASSWORD mancante in .env}
+            PGDATABASE: ${DB_NAME:?DB_NAME mancante in .env}
+        logging: *logging
+
+    maintenance:
+        environment: *app-env
+        logging: *logging
+
+volumes:
+    letsencrypt:
+    certbot_www:

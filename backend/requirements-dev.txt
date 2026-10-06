@@ -1,0 +1,8 @@
+pytest>=8.0.0
+ruff>=0.1.0
+pip-audit>=2.9.0
+# test di fastapi_app/ e gps_worker/ (tests/test_ingest_api.py, tests/test_worker_consumer.py):
+# le loro dipendenze, più httpx2 per il TestClient di FastAPI (con Starlette 1.x httpx è deprecato)
+-r fastapi_app/requirements.txt
+-r gps_worker/requirements.txt
+httpx2>=2.13.0

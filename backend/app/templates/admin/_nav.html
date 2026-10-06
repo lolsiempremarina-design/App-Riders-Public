@@ -1,0 +1,8 @@
+{% set here = request.endpoint %}
+<nav class="nav" aria-label="Pannello admin">
+    <a href="{{ url_for('admin.index') }}"{% if here in ('admin.index', 'admin.order_detail', 'admin.edit_order') %} aria-current="page"{% endif %}>Ordini</a>
+    <a href="{{ url_for('admin.new_order') }}"{% if here == 'admin.new_order' %} aria-current="page"{% endif %}>Nuovo ordine</a>
+    <a href="{{ url_for('admin.stats') }}"{% if here == 'admin.stats' %} aria-current="page"{% endif %}>Statistiche</a>
+    <a href="{{ url_for('admin.bikes') }}"{% if here == 'admin.bikes' %} aria-current="page"{% endif %}>Bici</a>
+    <a href="{{ url_for('admin.new_bike') }}"{% if here == 'admin.new_bike' %} aria-current="page"{% endif %}>Nuova bici</a>
+</nav>

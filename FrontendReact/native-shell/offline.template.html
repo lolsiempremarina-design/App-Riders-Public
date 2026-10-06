@@ -1,0 +1,46 @@
+<!doctype html>
+<!--
+  Pagina dell'app Android mostrata quando il sito RoR non si carica (telefono offline o server spento) e
+  l'app non è ancora in cache. scripts/android-sync.mjs la copia in offline.html con l'indirizzo del server.
+-->
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RoR</title>
+  <style>
+    body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      background: #0B0F17; color: #F3F4F6; font-family: system-ui, sans-serif; text-align: center; }
+    main { padding: 24px; max-width: 360px; }
+    .logo { font-size: 2.4rem; font-weight: 800; color: #9BE191; letter-spacing: 2px; margin-bottom: 18px; }
+    h1 { font-size: 1.25rem; margin: 0 0 10px; }
+    p { color: #D1D5DB; line-height: 1.5; margin: 0 0 24px; }
+    button { background: #9BE191; color: #0B0F17; border: 0; border-radius: 12px; padding: 14px 32px;
+      font-size: 1rem; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="logo" aria-hidden="true">RoR</div>
+    <h1 id="title">Nessuna connessione con RoR</h1>
+    <p id="body">Il server non risponde o il telefono è offline. Controlla la rete e riprova.</p>
+    <button id="retry" type="button">Riprova</button>
+  </main>
+  <script>
+    var texts = {
+      en: ['Can\'t reach RoR', 'The server is not responding or the phone is offline. Check your connection and try again.', 'Try again'],
+      es: ['No se puede conectar con RoR', 'El servidor no responde o el móvil no tiene conexión. Revisa la red y vuelve a intentarlo.', 'Reintentar']
+    };
+    var lang = String(navigator.language || 'it').slice(0, 2);
+    if (texts[lang]) {
+      document.documentElement.lang = lang;
+      document.getElementById('title').textContent = texts[lang][0];
+      document.getElementById('body').textContent = texts[lang][1];
+      document.getElementById('retry').textContent = texts[lang][2];
+    }
+    document.getElementById('retry').addEventListener('click', function () {
+      window.location.href = '%SERVER_URL%/';
+    });
+  </script>
+</body>
+</html>

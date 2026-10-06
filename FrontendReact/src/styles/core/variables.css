@@ -1,0 +1,86 @@
+/* ==========================================================================
+   RIDER OF RIDERS (RoR) - DESIGN SYSTEM & STYLES
+   Combines Image 1 layout with Image 2 typography, colors & cyan header style
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. CSS CUSTOM PROPERTIES / DESIGN TOKENS
+   -------------------------------------------------------------------------- */
+:root {
+  /* COLOR SYSTEM - UNIFIED FRESH GREEN PALETTE (MATCHING WEATHER CARD) */
+  --ror-cyan: #9BE191;
+  --ror-cyan-dark: #80D476;
+  --ror-cyan-shadow: rgba(155, 225, 145, 0.45);
+  
+  /* Mint / Soft Green Accents (Matching Screenshot Weather & Bike Card) */
+  --weather-green: #9BE191;
+  --weather-green-dark: #84D67A;
+  --bike-card-bg: #E5EFE0;
+  --bike-card-border: #D5E4CF;
+  --battery-pill-bg: #D4E5CE;
+
+  /* Theme Light Defaults */
+  --bg-app-shell: #F4F7F4;
+  --bg-main: #FFFFFF;
+  --bg-card: #FFFFFF;
+  --bg-card-subtle: #F2F6F2;
+  --text-main: #12181A;
+  --text-muted: #64748B;
+  --bg-card-subtle: #F0F7EE;
+  
+  --text-main: #0F171A;
+  --text-muted: #4B6357;
+  --border-light: #E0EDE0;
+
+  /* Testi di stato (importi, esiti, errori): contrasto AA (4.5:1) su bianco e sulle card verdi chiare */
+  --text-success: #047857;
+  --text-danger: #B91C1C;
+
+  /* TYPOGRAPHY */
+  --font-main: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-display: 'Syne', sans-serif;
+  --font-logo: 'Audiowide', cursive;
+  
+  /* RADIUS & SHADOWS */
+  --radius-sm: 10px;
+  --radius-md: 18px;
+  --radius-lg: 26px;
+  --radius-pill: 50px;
+  
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.06);
+  --shadow-cyan: 0 4px 14px rgba(155, 225, 145, 0.40);
+
+  /* Bordo e ombra delle card: i valori più usati dalle card dell'app. Prima --border-card e --shadow-card
+     erano usati (29 volte) senza essere definiti, e quei bordi e quelle ombre non comparivano */
+  --border-card: rgba(15, 23, 26, 0.08);
+  --shadow-card: 0 4px 14px rgba(0, 0, 0, 0.03);
+  
+  --transition-smooth: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* Dark Mode Tokens */
+body.theme-dark {
+  --bg-app-shell: #0B0F17;
+  --bg-main: #121824;
+  --bg-card: #1A2234;
+  --bg-card-subtle: #242E42;
+  --bike-card-bg: #1B2922;
+  --bike-card-border: #2B4237;
+  --battery-pill-bg: #273D32;
+  --text-main: #F8FAFC;
+  --text-muted: #94A3B8;
+  --navy-dark: #0F172A;
+  --text-success: #6EE7B7;
+  --text-danger: #F87171;
+  --border-card: rgba(255, 255, 255, 0.12);
+  --shadow-card: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+/* Link dentro un testo: leggibili in entrambi i temi (non il blu predefinito del browser) */
+.inline-link {
+  color: var(--text-success);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

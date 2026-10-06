@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% from "admin/_field.html" import status_badge %}
+
+{% block title %}Admin • Ordini{% endblock %}
+
+{% block content %}
+    <div class="head">
+        <h1>Ordini{% if rider %} di {{ rider.username }}{% endif %}</h1>
+        <a class="button" href="{{ url_for('admin.new_order') }}">Nuovo ordine</a>
+    </div>
+    {% if rider %}<p><a href="{{ url_for('admin.index', status=status or None) }}">Mostra gli ordini di tutti i rider</a></p>{% endif %}
+
+    {% set rider_id = rider.id if rider else None %}
+    <ul class="chips" aria-label="Filtra per stato">
+        <li><a href="{{ url_for('admin.index', rider=rider_id) }}"{% if not status %} aria-current="true"{% endif %}>tutti ({{ counts.values()|sum }})</a></li>
+        {% for s in statuses %}
+            <li><a href="{{ url_for('admin.index', status=s, rider=rider_id) }}"{% if s == status %} aria-current="true"{% endif %}>{{ s|status_label }} ({{ counts.get(s, 0) }})</a></li>
+        {% endfor %}
+    </ul>
+
+    {% if page.items %}
+    <div class="table-wrap">
+    <table class="wide">
+        <thead>
+            <tr>
+                <th>#</th><th>Stato</th><th>Locale</th><th>Ritiro → Consegna</th><th class="num">Totale</th>
+                <th>Rider</th><th>Creato</th><th>Entro</th><th>Consegnato</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for o in page.items %}
+            <tr>
+                <td><a href="{{ url_for('admin.order_detail', order_id=o.id) }}">#{{ o.id }}</a></td>
+                <td>{{ status_badge(o.status) }}{% if o.status == 'available' and o.expires_at and o.expires_at <= now %} <span class="muted">scaduto</span>{% endif %}</td>
+                <td>{{ o.restaurant_name }}</td>
+                <td>{{ o.pickup_address }} → {{ o.delivery_address }}{% if o.distance_km is not none %} <span class="muted nowrap">({{ o.distance_km|dec1 }} km)</span>{% endif %}</td>
+                <td class="num">{{ o.total|euro }}</td>
+                <td>{% if o.rider %}<a href="{{ url_for('admin.index', rider=o.rider.id) }}">{{ o.rider.username }}</a>{% else %}—{% endif %}</td>
+                <td class="nowrap">{{ o.created_at|local_dt }}</td>
+                <td class="nowrap">{{ o.due_at|local_dt }}</td>
+                <td class="nowrap">{{ o.delivered_at|local_dt }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% if page.pages > 1 %}
+    <nav class="pager" aria-label="Pagine">
+        {% if page.has_prev %}<a href="{{ url_for('admin.index', status=status or None, rider=rider_id, page=page.prev_num) }}">← Più recenti</a>{% endif %}
+        <span class="muted">Pagina {{ page.page }} di {{ page.pages }}</span>
+        {% if page.has_next %}<a href="{{ url_for('admin.index', status=status or None, rider=rider_id, page=page.next_num) }}">Meno recenti →</a>{% endif %}
+    </nav>
+    {% endif %}
+    {% else %}
+        <p class="card">Nessun ordine qui. <a href="{{ url_for('admin.new_order') }}">Crea un ordine</a>.</p>
+    {% endif %}
+{% endblock %}

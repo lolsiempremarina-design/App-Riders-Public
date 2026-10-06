@@ -1,0 +1,8 @@
+# Repository unico (FrontendReact/ + backend/): ogni cartella ha anche il suo .gitignore.
+# Copia di lavoro del file Firebase dell'app Android: quello usato è FrontendReact/android/app/google-services.json (ignorato)
+/google-services.json
+node_modules
+
+# Build e output dei test generati per sbaglio dalla radice (quelli veri stanno in FrontendReact/ e sono già ignorati lì)
+/dist/
+/test-results/

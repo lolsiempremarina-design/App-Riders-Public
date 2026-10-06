@@ -1,0 +1,125 @@
+apply plugin: 'com.android.application'
+
+import groovy.json.JsonSlurper
+
+// Indirizzo che l'app apre (server.url, scritto da `npm run android:sync` in capacitor.config.json):
+// il suo host serve per gli App Links (link d'invito e QR delle bici).
+def capConfigFile = file('src/main/assets/capacitor.config.json')
+def serverUrl = capConfigFile.exists() ? new JsonSlurper().parse(capConfigFile).server?.url : null
+def appLinkHost = serverUrl ? new URI(serverUrl).host : 'localhost'
+
+// Versione dell'app = "version" di package.json (versionCode crescente: 1.2.3 → 10203)
+def packageJson = new JsonSlurper().parse(file('../../package.json'))
+def (major, minor, patch) = packageJson.version.tokenize('.').collect { it.replaceAll('\\D.*', '').toInteger() }
+
+// Chiave di firma delle versioni per i tester (fuori dal repository): android/keystore.properties
+def keystorePropertiesFile = rootProject.file('keystore.properties')
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.withInputStream { keystoreProperties.load(it) }
+}
+
+// Solo build di debug: fidarsi del certificato autofirmato dello stack Docker locale
+// (backend/nginx/certs) per aprire https://localhost:8443 dall'emulatore con `adb reverse`.
+// Le build release non lo contengono mai.
+def devCertFile = file('../../../backend/nginx/certs/fullchain.pem')
+def devResDir = layout.buildDirectory.dir('generated/ror-dev-cert/res')
+
+android {
+    namespace = "com.ror.rider"
+    compileSdk = rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "com.ror.rider"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode major * 10000 + minor * 100 + patch
+        versionName packageJson.version
+        manifestPlaceholders = [appLinkHost: appLinkHost]
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    signingConfigs {
+        release {
+            if (keystoreProperties['storeFile']) {
+                storeFile rootProject.file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (keystoreProperties['storeFile']) {
+                signingConfig signingConfigs.release
+            }
+        }
+    }
+    sourceSets {
+        debug.res.srcDirs += devResDir
+    }
+}
+
+// network_security_config per il debug: certificato di sviluppo (se esiste) + certificati di sistema
+def generateDevCertRes = tasks.register('generateDevCertRes') {
+    inputs.files(devCertFile).optional()
+    outputs.dir(devResDir)
+    doLast {
+        def res = devResDir.get().asFile
+        delete res
+        new File(res, 'xml').mkdirs()
+        def anchors = '<certificates src="system" />'
+        if (devCertFile.exists()) {
+            new File(res, 'raw').mkdirs()
+            copy { from devCertFile; into new File(res, 'raw'); rename { 'ror_dev_cert.pem' } }
+            anchors += '\n            <certificates src="@raw/ror_dev_cert" />'
+        }
+        new File(res, 'xml/network_security_config.xml').text = """<?xml version="1.0" encoding="utf-8"?>
+<!-- generato da app/build.gradle (solo debug) -->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="false">localhost</domain>
+        <trust-anchors>
+            ${anchors}
+        </trust-anchors>
+    </domain-config>
+</network-security-config>
+"""
+    }
+}
+tasks.named('preBuild') { dependsOn generateDevCertRes }
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}

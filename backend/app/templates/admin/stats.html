@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% macro minutes(value) %}{% if value is none %}—{% else %}{% set m = value|round|int %}{% if m < 60 %}{{ m }} min{% else %}{{ m // 60 }} h {{ '%02d'|format(m % 60) }} min{% endif %}{% endif %}{% endmacro %}
+{% macro percent(rate) %}{% if rate is none %}—{% else %}{{ (rate * 100)|round|int }}%{% endif %}{% endmacro %}
+
+{% block title %}Admin • Statistiche{% endblock %}
+
+{% block content %}
+    {% set period = {'from': first.isoformat(), 'to': last.isoformat()} %}
+    <h1>Statistiche</h1>
+
+    <form class="period" method="GET" action="">
+        <div class="field"><label for="from">Dal</label><input id="from" type="date" name="from" value="{{ first.isoformat() }}" required></div>
+        <div class="field"><label for="to">Al</label><input id="to" type="date" name="to" value="{{ last.isoformat() }}" required></div>
+        <button type="submit">Mostra</button>
+    </form>
+    <ul class="chips" aria-label="Periodi">
+        {% for label, start, end in presets %}
+            <li><a href="{{ url_for('admin.stats', **{'from': start.isoformat(), 'to': end.isoformat()}) }}"{% if start == first and end == last %} aria-current="true"{% endif %}>{{ label }}</a></li>
+        {% endfor %}
+    </ul>
+
+    <h2>Adesso</h2>
+    <div class="kpis">
+        <div class="kpi"><a href="{{ url_for('admin.index', status='available') }}"><b>{{ stats.now.offered }}</b><span>offerti ai rider</span></a></div>
+        <div class="kpi"><a href="{{ url_for('admin.index', status='accepted') }}"><b>{{ stats.now.accepted }}</b><span>accettati, da ritirare</span></a></div>
+        <div class="kpi"><a href="{{ url_for('admin.index', status='picked_up') }}"><b>{{ stats.now.picked_up }}</b><span>ritirati, in consegna</span></a></div>
+    </div>
+
+    <h2>{% if first == last %}{{ first.strftime('%d/%m/%Y') }}{% else %}Dal {{ first.strftime('%d/%m/%Y') }} al {{ last.strftime('%d/%m/%Y') }}{% endif %}</h2>
+    {% set s = stats.summary %}
+    <div class="kpis">
+        <div class="kpi"><b>{{ s.deliveries }}</b><span>consegne</span></div>
+        <div class="kpi"><b>{{ s.earnings|euro }}</b><span>ai rider{% if s.bonus %}, di cui {{ s.bonus|euro }} di bonus{% endif %}</span></div>
+        <div class="kpi"><b>{{ s.distance_km|dec1 }} km</b><span>ritiro → consegna</span></div>
+        <div class="kpi"><b>{{ percent(s.on_time_rate) }}</b><span>in orario (ordini con orario promesso)</span></div>
+        <div class="kpi"><b>{{ stats.created }}</b><span>ordini creati</span></div>
+        <div class="kpi"><b>{{ stats.cancelled }}</b><span>annullati</span></div>
+        <div class="kpi"><b>{{ stats.expired }}</b><span>scaduti senza rider</span></div>
+    </div>
+
+    <h2>Tempi tipici</h2>
+    <p class="muted">Mediana delle consegne del periodo: un ordine dimenticato aperto non la sposta.</p>
+    <div class="kpis">
+        <div class="kpi"><b>{{ minutes(stats.times.accept) }}</b><span>dalla creazione all'accettazione</span></div>
+        <div class="kpi"><b>{{ minutes(stats.times.pickup) }}</b><span>dall'accettazione al ritiro</span></div>
+        <div class="kpi"><b>{{ minutes(stats.times.delivery) }}</b><span>dal ritiro alla consegna</span></div>
+        <div class="kpi"><b>{{ minutes(stats.times.total) }}</b><span>in tutto</span></div>
+    </div>
+
+    {% set chart = stats.chart %}
+    {% set peak = chart.peak or 1 %}
+    {% set step = ((chart.bars|length + 11) // 12) or 1 %}
+    <h2>Ordini per {{ chart.unit }}</h2>
+    <div class="chart" role="img" aria-label="Ordini creati e consegnati per {{ chart.unit }}: i numeri sono nella tabella qui sotto">
+        {% for bar in chart.bars %}
+            {% if chart.unit == 'ora' %}{% set label = bar.key %}
+            {% elif chart.unit == 'giorno' %}{% set label = bar.key[8:10] ~ '/' ~ bar.key[5:7] %}
+            {% else %}{% set label = bar.key[5:7] ~ '/' ~ bar.key[2:4] %}{% endif %}
+            <div class="slot" title="{{ label }}: {{ bar.created }} creati, {{ bar.delivered }} consegnati">
+                <div class="bars">
+                    <i class="bar created" style="height: {{ (100 * bar.created / peak)|round(1) }}%"></i>
+                    <i class="bar delivered" style="height: {{ (100 * bar.delivered / peak)|round(1) }}%"></i>
+                </div>
+                <small>{% if loop.index0 % step == 0 %}{{ label }}{% endif %}</small>
+            </div>
+        {% endfor %}
+    </div>
+    <p class="legend"><span><i class="bar created"></i>creati</span><span><i class="bar delivered"></i>consegnati</span></p>
+    <details>
+        <summary>Numeri del grafico</summary>
+        <div class="table-wrap">
+        <table>
+            <thead><tr><th>{{ chart.unit|capitalize }}</th><th class="num">Creati</th><th class="num">Consegnati</th></tr></thead>
+            <tbody>
+            {% for bar in chart.bars if bar.created or bar.delivered %}
+                <tr><td>{{ bar.key }}</td><td class="num">{{ bar.created }}</td><td class="num">{{ bar.delivered }}</td></tr>
+            {% else %}
+                <tr><td colspan="3" class="muted">Nessun ordine nel periodo.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </details>
+
+    <h2>Rider</h2>
+    {% if stats.riders %}
+    <div class="table-wrap">
+    <table class="wide">
+        <thead>
+            <tr><th>Rider</th><th class="num">Consegne</th><th class="num">Km</th><th class="num">Compenso</th><th class="num">Bonus</th>
+                <th class="num">Totale</th><th class="num">In orario</th><th class="num">Dal ritiro (mediana)</th><th>CSV</th></tr>
+        </thead>
+        <tbody>
+        {% for r in stats.riders %}
+            <tr>
+                <td>{% if r.rider_id %}<a href="{{ url_for('admin.index', rider=r.rider_id) }}">{{ r.username }}</a>{% else %}<span class="muted">{{ r.username }}</span>{% endif %}</td>
+                <td class="num">{{ r.deliveries }}</td>
+                <td class="num">{{ r.distance_km|dec1 }}</td>
+                <td class="num">{{ r.pay|euro }}</td>
+                <td class="num">{{ r.bonus|euro }}</td>
+                <td class="num"><strong>{{ r.earnings|euro }}</strong></td>
+                <td class="num">{{ percent(r.on_time_rate) }}</td>
+                <td class="num">{{ minutes(r.delivery_min) }}</td>
+                <td>{% if r.rider_id %}<a href="{{ url_for('admin.export_deliveries', rider=r.rider_id, **period) }}" download>consegne</a>{% endif %}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+        <p class="card muted">Nessuna consegna nel periodo.</p>
+    {% endif %}
+
+    <h2>Esporta</h2>
+    <p class="muted">File CSV per Excel o LibreOffice (separatore ";"). Contengono solo quello che serve per pagare i rider:
+        niente nomi dei clienti, indirizzi o contenuto degli ordini.</p>
+    <div class="actions">
+        <a class="button" href="{{ url_for('admin.export_deliveries', **period) }}" download>Consegne del periodo</a>
+        <a class="button secondary" href="{{ url_for('admin.export_riders', **period) }}" download>Totali per rider</a>
+    </div>
+{% endblock %}

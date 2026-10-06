@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% from "admin/_field.html" import field %}
+
+{% block title %}Admin • Nuova bici{% endblock %}
+
+{% block content %}
+    <h1>Nuova bici</h1>
+
+    <form class="form card" method="POST" action="">
+        {{ form.csrf_token }}
+        {{ field(form.bike_id) }}
+        {{ field(form.label) }}
+        <div class="grid-2">
+            {{ field(form.model) }}
+            {{ field(form.location) }}
+        </div>
+        {{ field(form.description) }}
+        {{ field(form.history, rows=4) }}
+        {{ field(form.contact_phone) }}
+        <button type="submit">Crea bici</button>
+    </form>
+{% endblock %}

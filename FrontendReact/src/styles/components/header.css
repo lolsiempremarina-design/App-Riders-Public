@@ -1,0 +1,249 @@
+/* --------------------------------------------------------------------------
+   5. CYAN TOP BANNER HEADER (EXACT ASYMMETRIC CURVE MATCHING USER DRAWING)
+   -------------------------------------------------------------------------- */
+.ror-top-banner {
+  background: #9BE191;
+  padding: 44px 20px 38px 20px;
+  clip-path: url(#ror-header-curve);
+  -webkit-clip-path: url(#ror-header-curve);
+  position: relative;
+  color: #000000;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.banner-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  z-index: 2;
+}
+
+.icon-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #000000;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
+  transition: var(--transition-smooth);
+}
+
+.icon-btn:hover {
+  transform: scale(1.06);
+}
+
+.ror-logo-wrapper {
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.ror-logo-audiowide {
+  font-family: 'Audiowide', cursive, sans-serif;
+  font-size: 3.2rem;
+  font-weight: 400;
+  color: #000000;
+  letter-spacing: -1px;
+  line-height: 1;
+  text-align: center;
+  margin: 0;
+}
+
+.right-small-btn {
+  width: 38px !important;
+  height: 38px !important;
+}
+
+
+
+/* USER GREETING SECTION BELOW CYAN BANNER */
+.user-greeting-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.user-profile-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--ror-cyan);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+}
+
+.user-titles .greeting-sub {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  display: block;
+}
+
+.user-titles .greeting-main {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text-main);
+  line-height: 1.2;
+}
+
+/* --------------------------------------------------------------------------
+   6. APP MAIN SCROLLABLE CONTENT BODY
+   -------------------------------------------------------------------------- */
+.user-welcome-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px;
+  margin-top: -6px;
+  margin-bottom: 2px;
+  position: relative;
+  z-index: 20;
+}
+
+.user-greeting-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.greeting-subtitle {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #4B6357;
+}
+
+body.theme-dark .greeting-subtitle {
+  color: #9BE191;
+}
+
+.greeting-main-title {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #0F171A;
+  letter-spacing: -0.4px;
+  line-height: 1.15;
+  margin: 0;
+}
+
+body.theme-dark .greeting-main-title {
+  color: #FFFFFF;
+}
+
+.quick-theme-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: var(--bg-card);
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: var(--transition-smooth);
+}
+
+body.theme-dark .quick-theme-btn {
+  background: var(--bg-card-subtle);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #FFFFFF;
+}
+
+.quick-theme-btn:hover {
+  transform: rotate(20deg) scale(1.06);
+}
+
+.app-content {
+  padding: 16px 18px 90px 18px;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.app-page-view {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  animation: fadeInView 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Custom scrollbar */
+.app-content::-webkit-scrollbar {
+  width: 4px;
+}
+.app-content::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+}
+
+/* --------------------------------------------------------------------------
+   7. USER GREETING ROW (IMAGE 1 AVATAR + IMAGE 2 HELLO WORLD)
+   -------------------------------------------------------------------------- */
+.user-greeting-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: -6px;
+}
+
+.user-profile-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--ror-cyan);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+}
+
+.user-titles .greeting-sub {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  display: block;
+}
+
+.user-titles .greeting-main {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text-main);
+  line-height: 1.2;
+}
+
+.quick-theme-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: var(--bg-card-subtle);
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}

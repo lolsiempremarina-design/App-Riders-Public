@@ -1,0 +1,330 @@
+# Variabili comuni a web e maintenance (stesso codice Flask)
+x-app-env: &app-env
+    DB_HOST: db
+    DB_PORT: 5432
+    REDIS_HOST: redis
+    DATABASE_URL: postgresql+psycopg://${DB_USER:-postgres}:${DB_PASSWORD:-password}@db:5432/${DB_NAME:-testlogin}
+
+# Log di ogni container: al massimo 5 file da 10 MB (prima crescevano senza limite anche sul PC usato come server)
+x-logging: &logging
+    driver: json-file
+    options:
+        max-size: "10m"
+        max-file: "5"
+
+# Tetto di memoria per container. Sono limiti, non prenotazioni: un servizio usa quello che gli
+# serve e basta. Senza, una perdita di memoria si porta via tutto il PC usato come server e non
+# solo il suo container (un messaggio di chat da 200 MB aveva già portato "ws" da 150 a 552 MB).
+# Se un servizio venisse chiuso per memoria esaurita (docker inspect: OOMKilled), alzare il suo
+# valore invece di toglierlo.
+
+services:
+    db:
+        image: postgres:15-alpine
+        restart: always
+        logging: *logging
+        mem_limit: 1g
+        environment:
+            POSTGRES_USER: ${DB_USER:-postgres}
+            POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+            POSTGRES_DB: ${DB_NAME:-testlogin}
+        # Rimuovi ports in produzione se non devi collegarti direttamente da DBeaver/PgAdmin locale
+        ports:
+            - "127.0.0.1:5433:5432" # Binding solo su localhost per sicurezza
+        volumes:
+            - postgres_data:/var/lib/postgresql/data
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-testlogin}"]
+            interval: 5s
+            timeout: 5s
+            retries: 5
+        networks:
+            - backend
+
+    rabbitmq:
+        image: rabbitmq:3.13-management
+        restart: unless-stopped
+        logging: *logging
+        mem_limit: 768m
+        environment:
+            RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+            RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+        volumes:
+            - rabbitmq_data:/var/lib/rabbitmq
+            # soglie di disco e memoria: vedi i commenti nel file
+            - ./rabbitmq/20-ror.conf:/etc/rabbitmq/conf.d/20-ror.conf:ro
+        healthcheck:
+            test: ["CMD", "rabbitmq-diagnostics", "-q", "check_port_connectivity"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+        networks:
+            - backend
+
+    redis:
+        image: redis:7-alpine
+        restart: unless-stopped
+        logging: *logging
+        mem_limit: 256m
+        volumes:
+            - redis_data:/data
+        healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 5s
+            timeout: 3s
+            retries: 5
+        networks:
+            - backend
+
+    web:
+        build: .
+        restart: always
+        logging: *logging
+        mem_limit: 1g
+        env_file:
+            - .env
+        environment:
+            <<: *app-env
+            # Notifiche push all'app Android: chiave in secrets/ (vedi secrets/README.md); senza file sono disattivate
+            FCM_SERVICE_ACCOUNT_FILE: /run/secrets/ror/firebase-service-account.json
+        depends_on:
+            db:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
+        volumes:
+            - gpx_storage:/data/volume_gpx_storage
+            - ./secrets:/run/secrets/ror:ro
+        expose:
+            - "8000"
+        # "sano" solo dopo le migrazioni (entrypoint.sh) e con gunicorn in ascolto
+        healthcheck:
+            test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health', timeout=5)"]
+            interval: 30s
+            timeout: 10s
+            retries: 3
+            start_period: 60s
+        networks:
+            - frontend
+            - backend
+
+    ws:
+        # Chat di gruppo in tempo reale (/ws/*): stesso codice e stessa immagine di web, ma in un processo a parte.
+        # Ogni chat aperta tiene occupato un thread: nello stesso processo dell'API bastavano ~16 chat aperte per
+        # lasciare in attesa le richieste dell'app, SOS compreso. Nginx inoltra qui solo /ws/; le migrazioni le
+        # applica web (si parte quando web è sano). Dopo un cambio del backend: up -d --build web ws maintenance.
+        # gunicorn_ws.conf.py all'avvio azzera in Redis il conteggio delle chat aperte (limite di 5 per account).
+        build: .
+        restart: always
+        logging: *logging
+        mem_limit: 1g
+        env_file:
+            - .env
+        environment: *app-env
+        entrypoint: ["gunicorn", "-c", "gunicorn_ws.conf.py", "-w", "2", "-k", "gthread", "--threads", "100",
+                     "-b", "0.0.0.0:8000", "--forwarded-allow-ips=*", "wsgi:app"]
+        depends_on:
+            web:
+                condition: service_healthy
+        expose:
+            - "8000"
+        healthcheck:
+            test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health', timeout=5)"]
+            interval: 30s
+            timeout: 10s
+            retries: 3
+            start_period: 30s
+        networks:
+            - frontend
+            - backend
+
+    fastapi:
+        build:
+            context: ./fastapi_app
+        restart: unless-stopped
+        logging: *logging
+        mem_limit: 512m
+        env_file:
+            - .env
+        environment:
+            RABBITMQ_HOST: rabbitmq
+        depends_on:
+            rabbitmq:
+                condition: service_healthy
+            web:
+                condition: service_started
+        expose:
+            - "8000"
+        # /healthz esisteva già in fastapi_app/main.py ma non lo usava nessuno
+        healthcheck:
+            test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz', timeout=5)"]
+            interval: 30s
+            timeout: 10s
+            retries: 3
+            start_period: 30s
+        networks:
+            - frontend
+            - backend
+
+    gps_worker:
+        build:
+            context: ./gps_worker
+        restart: unless-stopped
+        logging: *logging
+        mem_limit: 512m
+        env_file:
+            - .env
+        environment:
+            RABBITMQ_HOST: rabbitmq
+            DB_HOST: db
+            DB_PORT: 5432
+            OUTPUT_BASE_DIR: /data/volume_gpx_storage
+            REDIS_HOST: redis
+        volumes:
+            - gpx_storage:/data/volume_gpx_storage
+        depends_on:
+            rabbitmq:
+                condition: service_healthy
+            db:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
+        # Il worker scrive /tmp/gps_worker_alive dentro il ciclo di pika ogni 30 s. Se resta
+        # bloccato dentro un messaggio il processo non muore (e "restart" non se ne accorge):
+        # il file invecchia, il container risulta "unhealthy" e il watchdog interno lo chiude.
+        healthcheck:
+            test: ["CMD", "python", "-c", "import os,sys,time; sys.exit(0 if time.time() - os.path.getmtime('/tmp/gps_worker_alive') < 120 else 1)"]
+            interval: 30s
+            timeout: 10s
+            retries: 3
+            start_period: 60s
+        networks:
+            - backend
+
+    nginx:
+        # Immagine costruita dal frontend React: Nginx serve la PWA e fa da proxy verso Flask/FastAPI
+        build:
+            context: ../FrontendReact
+            dockerfile: Dockerfile
+        restart: always
+        logging: *logging
+        mem_limit: 256m
+        ports:
+            - "80:80"
+            - "443:443"
+        environment:
+            # In locale: qualsiasi nome host e certificato autofirmato (nginx/certs/README.md).
+            # In produzione li imposta docker-compose.prod.yml (dominio + Let's Encrypt).
+            SERVER_NAME: ${SERVER_NAME:-_}
+            SSL_CERTIFICATE: ${SSL_CERTIFICATE:-/etc/nginx/certs/fullchain.pem}
+            SSL_CERTIFICATE_KEY: ${SSL_CERTIFICATE_KEY:-/etc/nginx/certs/privkey.pem}
+        volumes:
+            - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+            - ./nginx/templates:/etc/nginx/templates:ro
+            - ./nginx/snippets:/etc/nginx/snippets:ro
+            - ./nginx/certs:/etc/nginx/certs:ro
+        depends_on:
+            - web
+            - ws
+            - fastapi
+        # /nginx-health sulla porta interna 8081 (ror.conf.template), non pubblicata in "ports:"
+        healthcheck:
+            test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8081/nginx-health"]
+            interval: 30s
+            timeout: 10s
+            retries: 3
+            start_period: 20s
+        networks:
+            - frontend
+
+    backup:
+        # Copia di database e GPX in BACKUP_DIR (predefinita backend/backups/, esclusa da git e dall'immagine):
+        # all'avvio dello stack e poi ogni 24 ore, conservata BACKUP_KEEP_DAYS giorni. Anche sul PC usato come
+        # server per le prove: copiare ogni tanto la cartella fuori dal PC (chiavetta USB, cloud personale).
+        # Ripristino: scripts/restore.sh (vedi DEPLOY.md).
+        image: postgres:15-alpine
+        restart: unless-stopped
+        logging: *logging
+        mem_limit: 512m
+        environment:
+            PGHOST: db
+            PGUSER: ${DB_USER:-postgres}
+            PGPASSWORD: ${DB_PASSWORD:-password}
+            PGDATABASE: ${DB_NAME:-testlogin}
+            BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+        # se una copia fallisce si riprova dopo un'ora invece di aspettare il giorno dopo
+        entrypoint: ["/bin/sh", "-c", "trap exit TERM; while :; do if sh /scripts/backup.sh; then pause=24h; else echo '[backup] ERRORE, nuovo tentativo tra 1 ora'; pause=1h; fi; sleep $$pause & wait $${!}; done"]
+        volumes:
+            - ${BACKUP_DIR:-./backups}:/backups
+            - gpx_storage:/data/volume_gpx_storage:ro
+            - ./scripts/backup.sh:/scripts/backup.sh:ro
+        depends_on:
+            db:
+                condition: service_healthy
+        networks:
+            - backend
+
+    maintenance:
+        # Ogni giorno (e all'avvio): tempi di conservazione promessi nella pagina Privacy (flask ror purge-expired)
+        # e file GPX orfani (flask ror cleanup-gpx). Stessa immagine di web: dopo un cambio del backend
+        # ricostruire anche questo servizio (docker compose up -d --build web ws maintenance).
+        # Quando Docker riparte i servizi ripartono insieme (depends_on non vale): si attende il database.
+        build: .
+        restart: unless-stopped
+        logging: *logging
+        mem_limit: 512m
+        env_file:
+            - .env
+        environment: *app-env
+        entrypoint: ["/bin/sh", "-c", "trap exit TERM; while :; do until pg_isready -q -h \"$${DB_HOST:-db}\" -U \"$${DB_USER}\" -d \"$${DB_NAME}\"; do sleep 5; done; flask ror purge-expired; flask ror cleanup-gpx; sleep 24h & wait $${!}; done"]
+        volumes:
+            - gpx_storage:/data/volume_gpx_storage
+        depends_on:
+            web:
+                condition: service_healthy
+        networks:
+            - backend
+
+    ngrok:
+        # Tunnel pubblico facoltativo per provare da telefono: docker compose --profile ngrok up -d
+        # (richiede NGROK_AUTHTOKEN in .env; senza profilo non parte). Entra da nginx:8444, porta interna dove
+        # nginx crede all'X-Forwarded-For di ngrok (IP vero del telefono per il limite sui tentativi di accesso).
+        profiles: ["ngrok"]
+        image: ngrok/ngrok:alpine
+        restart: unless-stopped
+        logging: *logging
+        mem_limit: 256m
+        environment:
+            NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:-}
+            NGROK_DOMAIN: ${NGROK_DOMAIN:-}
+            NGROK_WEB_ADDR: 0.0.0.0:4040
+        entrypoint: ["/bin/sh", "-c"]
+        command:
+            - >
+              if [ -z "$$NGROK_AUTHTOKEN" ]; then
+                echo "[ERROR] NGROK_AUTHTOKEN non impostato in .env!" >&2;
+                echo "Configura NGROK_AUTHTOKEN nel file .env per avviare il tunnel ngrok." >&2;
+                exit 1;
+              fi;
+              CMD="http https://nginx:8444";
+              if [ -n "$$NGROK_DOMAIN" ]; then
+                CMD="$$CMD --url=$$NGROK_DOMAIN";
+              fi;
+              exec ngrok $$CMD
+        ports:
+            - "127.0.0.1:4040:4040"
+        depends_on:
+            - nginx
+        networks:
+            - frontend
+
+
+volumes:
+    postgres_data:
+    rabbitmq_data:
+    gpx_storage:
+    redis_data:
+
+networks:
+    frontend:
+    backend:

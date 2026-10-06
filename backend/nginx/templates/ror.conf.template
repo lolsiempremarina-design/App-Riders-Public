@@ -1,0 +1,76 @@
+# Generato all'avvio del container nginx (envsubst dell'immagine ufficiale) in /etc/nginx/conf.d/ror.conf.
+# Variabili: SERVER_NAME (dominio, "_" in locale), SSL_CERTIFICATE, SSL_CERTIFICATE_KEY.
+
+# 1. HTTP: rinnovo dei certificati Let's Encrypt e reindirizzamento a HTTPS
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${SERVER_NAME};
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# 1-bis. Solo per il healthcheck del container (docker-compose.yml). In chiaro e senza redirect,
+# perché il wget di busybox non parla TLS e il certificato locale è autofirmato. La porta non è
+# in "ports:", quindi da fuori non esiste: un "allow 127.0.0.1" sulla 80 non sarebbe bastato,
+# perché con il NAT di Docker le richieste da fuori arrivano comunque come 127.0.0.1.
+server {
+    listen 8081;
+    server_name _;
+    access_log off;
+
+    location = /nginx-health {
+        add_header Content-Type text/plain;
+        return 200 "ok\n";
+    }
+
+    location / {
+        return 404;
+    }
+}
+
+# 2. HTTPS: frontend React + API Flask + ingestione FastAPI sullo stesso dominio
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name ${SERVER_NAME};
+
+    ssl_certificate     ${SSL_CERTIFICATE};
+    ssl_certificate_key ${SSL_CERTIFICATE_KEY};
+
+    include /etc/nginx/snippets/tls.conf;
+
+    # L'indirizzo del cliente è quello della connessione: X-Forwarded-For non è creduto. Prima nginx lo accettava da
+    # ogni indirizzo privato e chi si collegava dalla stessa rete (wifi di casa, PC) passava per l'IP del container
+    # Docker: con un X-Forwarded-For inventato a ogni richiesta aggirava il limite sui tentativi di accesso.
+    include /etc/nginx/snippets/ror-app.conf;
+}
+
+# 3. Tunnel ngrok (servizio ngrok di docker-compose.yml): porta raggiungibile solo dai container, non pubblicata.
+# Qui l'indirizzo vero del telefono arriva in X-Forwarded-For (aggiunto da ngrok, l'ultimo della lista).
+server {
+    listen 8444 ssl;
+    http2 on;
+    server_name _;
+
+    ssl_certificate     ${SSL_CERTIFICATE};
+    ssl_certificate_key ${SSL_CERTIFICATE_KEY};
+    include /etc/nginx/snippets/tls.conf;
+
+    set_real_ip_from 10.0.0.0/8;
+    set_real_ip_from 172.16.0.0/12;
+    set_real_ip_from 192.168.0.0/16;
+    real_ip_header X-Forwarded-For;
+    real_ip_recursive on;
+    # i redirect di nginx (es. /web → /web/) senza la porta interna, che dal telefono non esiste
+    absolute_redirect off;
+
+    include /etc/nginx/snippets/ror-app.conf;
+}

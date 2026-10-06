@@ -1,0 +1,14 @@
+{% from "admin/_field.html" import field %}
+{{ field(form.restaurant_name) }}
+<div class="grid-2">
+    {{ field(form.pickup_address) }}
+    {{ field(form.delivery_address) }}
+</div>
+{{ field(form.customer_name) }}
+{{ field(form.items, rows=2) }}
+{{ field(form.notes, rows=2) }}
+<div class="grid-2">
+    {{ field(form.pay) }}
+    {{ field(form.bonus) }}
+</div>
+{{ field(form.distance_km) }}

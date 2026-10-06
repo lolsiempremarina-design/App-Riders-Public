@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <!-- zoom consentito (WCAG 1.4.4): chi ha difficoltà di vista può ingrandire con due dita -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#9BE191" />
+  <meta name="description" content="RoR (Rider of Riders): percorsi GPS, SOS, consegne e gruppi per chi lavora in bici." />
+  
+  <title>RoR – Rider of Riders</title>
+
+  <!-- Il manifest PWA (manifest.webmanifest) viene aggiunto da vite-plugin-pwa -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="RoR Rider" />
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+
+  <link rel="dns-prefetch" href="https://tile.openstreetmap.org" />
+  <!-- Font Audiowide, Plus Jakarta Sans e Syne: pacchetti @fontsource importati in src/main.jsx -->
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.jsx"></script>
+</body>
+</html>

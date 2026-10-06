@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Icona delle notifiche (push, GPS attivo, cadute): la bici del logo RoR, bianca su trasparente come
+     richiede Android (stessi tratti di scripts/generate-icons.mjs, riquadro 100×100 centrato sulla bici). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="84"
+    android:viewportHeight="84">
+    <group android:translateX="-8" android:translateY="-15">
+        <path
+            android:pathData="M17,67 A10,10 0 1,0 37,67 A10,10 0 1,0 17,67 M63,67 A10,10 0 1,0 83,67 A10,10 0 1,0 63,67"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="5" />
+        <path
+            android:pathData="M27,67 L41,45 L60,45 L73,67 M41,45 L50,67 L60,45 M60,45 L57,37 M52,37 L62,37 M41,45 L38,38 M34,38 L42,38"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="5"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+    </group>
+</vector>

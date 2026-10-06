@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% from "admin/_field.html" import field, status_badge %}
+
+{% block title %}Admin • Modifica ordine #{{ order.id }}{% endblock %}
+
+{% block content %}
+    <h1>Modifica ordine #{{ order.id }} {{ status_badge(order.status) }}</h1>
+    <p class="muted">
+        {% if order.rider %}{{ order.rider.username }} riceve un avviso se cambia qualcosa di quello che vede (dati, compenso, orario promesso).
+        {% else %}Se l'offerta era scaduta e le dai un nuovo orario (o la lasci senza scadenza), l'ordine è di nuovo offerto e i rider ricevono una notifica.{% endif %}
+        Orari nel fuso {{ config.get('APP_TIMEZONE') or 'Europe/Rome' }}.
+    </p>
+
+    <form class="form card" method="POST" action="">
+        {{ form.csrf_token }}
+        {% include "admin/_order_fields.html" %}
+        <div class="grid-2">
+            {{ field(form.expires_at) }}
+            {{ field(form.due_at) }}
+        </div>
+        <div class="actions">
+            <button type="submit">Salva</button>
+            <a class="button secondary" href="{{ url_for('admin.order_detail', order_id=order.id) }}">Annulla le modifiche</a>
+        </div>
+    </form>
+{% endblock %}

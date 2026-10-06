@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% from "admin/_field.html" import field %}
+
+{% block title %}Admin • Nuovo ordine{% endblock %}
+
+{% block content %}
+    <h1>Nuovo ordine</h1>
+    <p class="muted">L'ordine compare subito nella scheda "Disponibili" di Consegne e ogni rider riceve una notifica.
+        Se lo assegni a un rider, va solo a quel rider (come se l'avesse accettato) e gli altri non lo vedono.</p>
+
+    <form class="form card" method="POST" action="">
+        {{ form.csrf_token }}
+        {% include "admin/_order_fields.html" %}
+        <div class="grid-2">
+            {{ field(form.offer_minutes) }}
+            {{ field(form.due_minutes) }}
+        </div>
+        {{ field(form.rider_id) }}
+        <button type="submit">Crea ordine</button>
+    </form>
+{% endblock %}

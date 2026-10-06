@@ -1,0 +1,10 @@
+{% macro field(f, rows=None) %}
+<div class="field{% if f.errors %} has-error{% endif %}">
+    {{ f.label }}
+    {% set attrs = {'aria-invalid': 'true'} if f.errors else {} %}
+    {% if rows %}{{ f(rows=rows, **attrs) }}{% else %}{{ f(**attrs) }}{% endif %}
+    {% for e in f.errors %}<span class="error">{{ e }}</span>{% endfor %}
+</div>
+{% endmacro %}
+
+{% macro status_badge(status) %}<span class="badge status-{{ status }}">{{ status|status_label }}</span>{% endmacro %}

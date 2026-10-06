@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Admin • Bici{% endblock %}
+
+{% block content %}
+    <div class="head">
+        <h1>Bici</h1>
+        <a class="button" href="{{ url_for('admin.new_bike') }}">Nuova bici</a>
+    </div>
+    <p class="muted">Stampa il QR sulla bici: aprendolo, il rider vede la scheda pubblica e può collegarla al suo account.</p>
+
+    {% if bikes %}
+    <div class="table-wrap">
+    <table>
+        <thead><tr><th>Codice</th><th>Nome</th><th>Modello</th><th>Rider collegato</th><th>Pagina pubblica</th><th>QR</th></tr></thead>
+        <tbody>
+        {% for b in bikes %}
+            {% set public_url = request.host_url ~ 'bici/' ~ b.bike_id %}
+            <tr>
+                <td>{{ b.bike_id }}</td>
+                <td>{{ b.label or '—' }}</td>
+                <td>{{ b.model or '—' }}</td>
+                <td>{{ b.user.username if b.user else '—' }}</td>
+                <td><a href="/bici/{{ b.bike_id }}">/bici/{{ b.bike_id }}</a></td>
+                <td class="qr" role="img" aria-label="QR {{ b.bike_id }}">{{ public_url|qr_svg }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+        <p class="card">Nessuna bici.</p>
+    {% endif %}
+{% endblock %}

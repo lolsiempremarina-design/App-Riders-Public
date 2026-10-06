@@ -1,0 +1,118 @@
+# CI del repository unico (backend/ + FrontendReact/) a ogni push e pull request:
+# test e migrazioni del backend (con API di ingestione e worker GPS), test/build/audit del frontend,
+# APK di prova dell'app Android.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: ror
+          POSTGRES_PASSWORD: ror
+          POSTGRES_DB: ror
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ror -d ror"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      SQLALCHEMY_DATABASE_URI: postgresql+psycopg://ror:ror@localhost:5432/ror
+      SESSION_COOKIE_SECURE: "false"
+      REMEMBER_COOKIE_SECURE: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            backend/requirements*.txt
+            backend/fastapi_app/requirements.txt
+            backend/gps_worker/requirements.txt
+      - name: Segreti usa e getta per questo job (nessun segreto nel repository)
+        run: |
+          echo "SECRET_KEY=$(python -c 'import secrets; print(secrets.token_urlsafe(48))')" >> "$GITHUB_ENV"
+          echo "SECURITY_PASSWORD_SALT=$(python -c 'import secrets; print(secrets.token_urlsafe(48))')" >> "$GITHUB_ENV"
+      # requirements-dev.txt include anche le dipendenze di fastapi_app/ e gps_worker/: i loro test girano qui
+      - run: pip install -r requirements.txt -r requirements-dev.txt
+      - name: Test (pytest, SQLite in memoria)
+        run: mkdir -p logs && python -m pytest -q
+      - name: Migrazioni su PostgreSQL vuoto (upgrade, check, downgrade, upgrade)
+        run: |
+          flask db upgrade
+          flask db check
+          flask db downgrade
+          flask db upgrade
+      - name: SQL del worker GPS sullo schema migrato (rider_shifts, fall_events)
+        env:
+          ROR_WORKER_TEST_DATABASE_URI: postgresql+psycopg://ror:ror@localhost:5432/ror
+        run: python -m pytest -q tests/test_worker_postgres.py
+      - name: Vulnerabilità note nelle dipendenze
+        run: pip-audit -r requirements.txt -r fastapi_app/requirements.txt -r gps_worker/requirements.txt
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: FrontendReact
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: FrontendReact/package-lock.json
+      - run: npm ci --include=optional
+      - name: Test (Vitest)
+        run: npx vitest run
+      - name: Build (Vite + PWA)
+        run: npm run build
+      - name: Vulnerabilità note nelle dipendenze di produzione
+        run: npm audit --omit=dev --audit-level=moderate
+
+  # APK di prova (debug) dell'app Android. Indirizzo del server: variabile del repository CAP_SERVER_URL;
+  # notifiche push solo se il secret GOOGLE_SERVICES_JSON contiene FrontendReact/android/app/google-services.json.
+  android-apk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: FrontendReact
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: FrontendReact/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci --include=optional
+      - name: Progetto Android (Capacitor)
+        run: npm run android:sync
+        env:
+          CAP_SERVER_URL: ${{ vars.CAP_SERVER_URL || 'https://example.com' }}
+      - name: google-services.json (facoltativo)
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: if [ -n "$GOOGLE_SERVICES_JSON" ]; then printf '%s' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json; fi
+      - name: Build APK (debug)
+        working-directory: FrontendReact/android
+        # da Windows il permesso di esecuzione di gradlew può non arrivare nel repository
+        run: chmod +x gradlew && ./gradlew assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ror-debug-apk
+          path: FrontendReact/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 14

@@ -1,0 +1,176 @@
+{
+  "_description": "Codici fiscali che backend (app/auth/tax_id.py) e frontend (src/utils/fiscalCodeUtils.js) devono trattare allo stesso modo: il frontend li calcola, il backend li accetta. Letti dai test di entrambi (tests/test_tax_id_shared.py e src/utils/__tests__/fiscalCodeShared.test.js). Il primo è l'esempio classico dell'Agenzia delle Entrate.",
+  "cases": [
+    {
+      "note": "esempio classico dell'Agenzia delle Entrate",
+      "name": "Mario",
+      "surname": "Rossi",
+      "birth_date": "1980-01-01",
+      "gender": "M",
+      "municipality": "H501",
+      "code": "RSSMRA80A01H501U"
+    },
+    {
+      "note": "donna: giorno + 40",
+      "name": "Maria",
+      "surname": "Bianchi",
+      "birth_date": "1985-12-31",
+      "gender": "F",
+      "municipality": "F205",
+      "code": "BNCMRA85T71F205C"
+    },
+    {
+      "note": "anno bisestile",
+      "name": "Luca",
+      "surname": "Verdi",
+      "birth_date": "2000-02-29",
+      "gender": "M",
+      "municipality": "H501",
+      "code": "VRDLCU00B29H501K"
+    },
+    {
+      "note": "nomi corti: X di riempimento",
+      "name": "Bo",
+      "surname": "Fo",
+      "birth_date": "1999-01-01",
+      "gender": "M",
+      "municipality": "H501",
+      "code": "FOXBOX99A01H501I"
+    },
+    {
+      "note": "nome con 4+ consonanti: 1a, 3a e 4a",
+      "name": "Christian",
+      "surname": "Ferrari",
+      "birth_date": "1993-03-03",
+      "gender": "M",
+      "municipality": "F839",
+      "code": "FRRCRS93C03F839U"
+    },
+    {
+      "note": "accenti",
+      "name": "Nicolò",
+      "surname": "Mattè",
+      "birth_date": "1988-08-08",
+      "gender": "M",
+      "municipality": "L219",
+      "code": "MTTNCL88M08L219A"
+    },
+    {
+      "note": "trattino e apostrofo",
+      "name": "Anne-Marie",
+      "surname": "D'Angelo",
+      "birth_date": "1991-11-11",
+      "gender": "F",
+      "municipality": "A944",
+      "code": "DNGNMR91S51A944A"
+    },
+    {
+      "note": "nomi composti con spazi",
+      "name": "Maria Grazia",
+      "surname": "De Luca",
+      "birth_date": "1979-09-09",
+      "gender": "F",
+      "municipality": "D612",
+      "code": "DLCMGR79P49D612P"
+    },
+    {
+      "note": "Ç si scompone in C",
+      "name": "Fabrizio",
+      "surname": "Çelik",
+      "birth_date": "1990-01-15",
+      "gender": "M",
+      "municipality": "Z243",
+      "code": "CLKFRZ90A15Z243D"
+    },
+    {
+      "note": "ş si scompone, ı senza punto",
+      "name": "Ayşe",
+      "surname": "Yıldız",
+      "birth_date": "1998-08-18",
+      "gender": "F",
+      "municipality": "Z243",
+      "code": "YLDYSA98M58Z243I"
+    },
+    {
+      "note": "Ł → L",
+      "name": "Łukasz",
+      "surname": "Kowalski",
+      "birth_date": "1994-05-05",
+      "gender": "M",
+      "municipality": "Z127",
+      "code": "KWLLSZ94E05Z127L"
+    },
+    {
+      "note": "Đ đ → D",
+      "name": "Đorđe",
+      "surname": "Petrović",
+      "birth_date": "1987-03-12",
+      "gender": "M",
+      "municipality": "Z158",
+      "code": "PTRDRD87C12Z158A"
+    },
+    {
+      "note": "Ø → O",
+      "name": "Øyvind",
+      "surname": "Hansen",
+      "birth_date": "1989-09-19",
+      "gender": "M",
+      "municipality": "Z125",
+      "code": "HNSYND89P19Z125A"
+    },
+    {
+      "note": "Æ → AE, ø → O",
+      "name": "Ægir",
+      "surname": "Sørensen",
+      "birth_date": "1990-06-30",
+      "gender": "M",
+      "municipality": "Z107",
+      "code": "SRNGRA90H30Z107R"
+    },
+    {
+      "note": "Œ → OE",
+      "name": "Zoë",
+      "surname": "Œrsted",
+      "birth_date": "1995-04-04",
+      "gender": "F",
+      "municipality": "Z107",
+      "code": "RSTZOE95D44Z107M"
+    },
+    {
+      "note": "Þ → TH, ð → D",
+      "name": "Þóra",
+      "surname": "Guðmundsdóttir",
+      "birth_date": "1992-07-07",
+      "gender": "F",
+      "municipality": "Z117",
+      "code": "GDMTHR92L47Z117Y"
+    },
+    {
+      "note": "ß → SS",
+      "name": "Gauß",
+      "surname": "Müller",
+      "birth_date": "1980-04-14",
+      "gender": "M",
+      "municipality": "Z112",
+      "code": "MLLGSS80D14Z112G"
+    },
+    {
+      "note": "Ħ → H, Ŧ → T",
+      "name": "Ħanna",
+      "surname": "Ŧomić",
+      "birth_date": "1996-10-10",
+      "gender": "F",
+      "municipality": "Z118",
+      "code": "TMCHNN96R50Z118B"
+    },
+    {
+      "note": "Ŀ ŀ → L (catalano)",
+      "name": "Ŀluís",
+      "surname": "Puŀlà",
+      "birth_date": "1993-02-02",
+      "gender": "M",
+      "municipality": "Z131",
+      "code": "PLLLLS93B02Z131E"
+    }
+  ]
+}

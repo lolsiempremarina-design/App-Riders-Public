@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name" translatable="false">RoR</string>
+    <string name="title_activity_main" translatable="false">RoR</string>
+    <string name="package_name" translatable="false">com.ror.rider</string>
+    <string name="custom_url_scheme" translatable="false">com.ror.rider</string>
+
+    <!-- Notifica fissa del GPS durante la sessione (plugin background-geolocation) -->
+    <string name="capacitor_background_geolocation_notification_channel_name">Sessione GPS</string>
+    <string name="capacitor_background_geolocation_notification_icon" translatable="false">drawable/ic_stat_ror</string>
+    <string name="capacitor_background_geolocation_notification_color" translatable="false">#9BE191</string>
+</resources>
